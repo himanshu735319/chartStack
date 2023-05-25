@@ -1,0 +1,89 @@
+By Himanshu
+
+
+################################# Documentation of Context Object #######################################
+
+
+# NuGet Package Required
+	=> Microsoft.Extensions.Caching.Memory
+
+
+# Location of file in project
+	=> emergeAPIDev (root)
+					eMergeBO project
+								ContextObject.cs
+
+
+# What all data can be fetched currently from Context
+
+	1. ConfigSetting list - contains all config key-value that are present in COM_CONFIGSETTINGS table in database
+	2. ComCode list		  - contains all data that is present in COM_CODE table in database
+	3. Entity list		  - contains all data that is present in ENT_ENTITY table in database
+
+
+# Using ContextObject
+	
+	1. How to use ?
+	   -> Add it as a service in startup.cs in EmergeAPI project 
+			services.AddScoped<ContextObject>();
+	   -> Inside the class
+					- add this as a property in Objects and Variables section and also add required namespace
+
+						 #region variables and Objects
+						 ContextObject m_objContextObject;
+						 #endregion variables and Objects
+
+					- also add it in constructor
+
+						public <ClassName>(ContextObject i_objContextObject,IMapper i_objMapper, DBConnector i_objDBConnector, IConfiguration i_objConfig, IMemoryCache i_objMemoryCache,IHttpContextAccessor i_objHttpContextAccessor,CommonLogExecption i_objCommonLogExecption) : base(i_objHttpContextAccessor,i_objLogger, i_objMapper, i_objDBConnector, i_objConfig, i_objCommonLogExecption)
+						{
+							m_objContextObject = i_objContextObject;
+						}
+
+					- now directly use its method by applying dot operator
+
+						m_objContextObject.getConfigKeyValue(ConstEnum.ConfigSettings.L_E, out sComConfigLicenseEnt);
+
+
+	2. When to use ?
+		-> where ever you are required to fetch details related to any of these three table, you can directly get it from contextObject
+		   instead of making a database call. Later you can do the required processing on this returned data from context as per your logic.
+		   
+	3. What we shouldn't use ContextObject ?
+
+		-> Don't use context object in CommonBO.cs file ( present in eMergeBO -> CommonBO ) as it would create circular dependency because in context object
+		   we are calling methods of CommonBO which further make calls to DAL. So it will be like
+
+		   CommonBO -> ContextObject -> CommonBO .....
+
+
+
+
+# Using Microsoft.Extensions.Caching.Memory for caching our data
+	
+	=> add this service in startup.cs 
+		-> services.AddMemoryCache();
+
+	=> Inject IMemoryCache using DependencyInjection.
+
+	=> setting data in cache memory with a key associated to it
+			
+		-> create a key using which you would retrieve your data from cache
+			eg: string key = "configsettinglist";
+
+		-> now set your data to cache memory by
+			m_objMemoryCache.Set(key, <Your Data>, new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(1)));
+
+		-> In above code new MemoryCacheEntryOptions().SetAbsoluteExpiration(TimeSpan.FromDays(1)) lets us set the expiration time
+			after which it will once again make a call to DAL to retrieve latest data from database.
+
+	=> retrieving value using key from cache memory
+
+		-> m_objMemoryCache.Get(key)
+			
+
+
+
+
+
+
